@@ -28,12 +28,13 @@ def main(args=None):
         return parser.print_help()
     try:
         # Note: universal_newlines is just a way to induce subprocess to make stdin a text buffer and encode it for us
-        jq = subprocess.Popen(['jq'] + args.jq_args, stdin=subprocess.PIPE, universal_newlines=True)
+        jq = subprocess.Popen(['jq'] + args.jq_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
     except OSError as e:
         parser.exit("yq: Error while starting jq: {}: {}. Is jq installed and available on PATH?".format(type(e).__name__, e))
     try:
-        json.dump(yaml.safe_load(sys.stdin), jq.stdin)
+        json.dump(yaml.load(sys.stdin, yaml.BaseLoader), jq.stdin)
         jq.stdin.close()
+        yaml.dump(json.load(jq.stdout), stream=sys.stdout, default_flow_style=False)
         jq.wait()
         exit(jq.returncode)
     except Exception as e:
